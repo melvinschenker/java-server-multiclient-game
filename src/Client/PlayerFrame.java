@@ -1,4 +1,4 @@
-package com.company;
+package Client;
 
 import java.awt.*;
 import java.awt.event.*;
@@ -36,14 +36,12 @@ public class PlayerFrame extends JFrame {
         this.setTitle("Player #" + playerID);
         contentPane.setPreferredSize(new Dimension(width, height));
         createSprites();
-
         dc = new DrawingComponent();
         contentPane.add(dc);
 
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         this.pack();
         this.setVisible(true);
-
 
         addKeyListener(setUpKeyListener());
         setUpAnimationTimer();
@@ -52,7 +50,6 @@ public class PlayerFrame extends JFrame {
     }
 
     private void createSprites(){
-        System.out.println(playerID);
         if(playerID == 1) {
             me = new PlayerSprite(100,400,50,Color.BLUE);
             enemy = new PlayerSprite(490,400,50,Color.RED);
@@ -139,26 +136,64 @@ public class PlayerFrame extends JFrame {
 
             playerID = in.readInt();
             System.out.println("You are player #" + playerID);
+
             if(playerID == 1) {
                 System.out.println("Wait for Player #2 to connect...");
             }
+
             rfsRunnable = new ReadFromServer(in);
             wtsRunnable = new WriteToServer(out);
+            rfsRunnable.waitForStartMsg();
+
         } catch (IOException ex) {
             System.out.println("IOException from connectToServer().");
+        }
+    }
+
+    private class DrawingComponent extends JComponent {
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2d = (Graphics2D) g;
+            enemy.drawSprite(g2d);
+            me.drawSprite(g2d);
         }
     }
 
     public class ReadFromServer implements Runnable{
         private DataInputStream dataIn;
 
-        public ReadFromServer(DataInputStream dataIn){
-            this.dataIn = dataIn;
+        public ReadFromServer(DataInputStream in){
+            dataIn = in;
             System.out.println("ReadFromServer Runnable created");
         }
 
         @Override
         public void run() {
+            try {
+                while (true) {
+                    if(enemy != null) {
+                        enemy.setX(dataIn.readDouble());
+                        enemy.setY(dataIn.readDouble());
+                    }
+                }
+            } catch (IOException ex) {
+                System.out.println("IOException from RFS run(),");
+            }
+        }
+
+        public void waitForStartMsg() {
+            try {
+                String startMsg = dataIn.readUTF();
+                System.out.println("Message from server: " + startMsg);
+
+                // Starting threads after both player connected
+                Thread readThread = new Thread(rfsRunnable);
+                Thread writeThread = new Thread(wtsRunnable);
+                readThread.start();
+                writeThread.start();
+
+            } catch (IOException ex) {
+                System.out.println("IOException from waitForStartMsg().");
+            }
         }
     }
 
@@ -166,21 +201,28 @@ public class PlayerFrame extends JFrame {
         private DataOutputStream dataOut;
 
         public WriteToServer(DataOutputStream out){
-            this.dataOut = out;
+            dataOut = out;
             System.out.println("ReadFromServer Runnable created");
         }
 
         @Override
         public void run() {
-        }
-    }
-
-
-    private class DrawingComponent extends JComponent {
-        protected void paintComponent(Graphics g) {
-            Graphics2D g2d = (Graphics2D) g;
-            me.drawSprite(g2d);
-            enemy.drawSprite(g2d);
+            try {
+                while (true){
+                    if (me != null) {
+                        dataOut.writeDouble(me.getX());
+                        dataOut.writeDouble(me.getY());
+                        dataOut.flush();
+                    }
+                    try {
+                        Thread.sleep(25);
+                    } catch (InterruptedException ex) {
+                        System.out.println("InterruptedException from WTS run().");
+                    }
+                }
+            } catch (IOException ex) {
+                System.out.println("IOException from WTS run().");
+            }
         }
     }
 

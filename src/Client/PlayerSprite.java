@@ -1,4 +1,4 @@
-package com.company;
+package Client;
 
 import java.awt.*;
 import java.awt.geom.*;
@@ -15,18 +15,14 @@ public class PlayerSprite {
     }
 
     public void drawSprite(Graphics2D g2d) {
-        Rectangle2D.Double square = new Rectangle2D.Double(x,y,size,size);
+        Ellipse2D.Double square = new Ellipse2D.Double(x,y,size,size);
         g2d.setColor(color);
         g2d.fill(square);
     }
 
-    public void moveH(double n) {
-        x += n;
-    }
+    public void moveH(double n) { x += n; }
 
-    public void moveV(double n) {
-        y += n;
-    }
+    public void moveV(double n) { y += n; }
 
     public void setX(double n) {
         x = n;
